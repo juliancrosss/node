@@ -19,13 +19,14 @@ class ChannelImpl final : public v8_inspector::V8Inspector::Channel {
   virtual ~ChannelImpl() = default;
 
  private:
-  void sendProtocolResponse(int callId,
-                            const v8_inspector::StringView& message) override {
-    frontend_channel_->SendMessageToFrontend(message);
+  void sendResponse(
+      int callId,
+      std::unique_ptr<v8_inspector::StringBuffer> message) override {
+    frontend_channel_->SendMessageToFrontend(message->string());
   }
-  void sendProtocolNotification(
-      const v8_inspector::StringView& message) override {
-    frontend_channel_->SendMessageToFrontend(message);
+  void sendNotification(
+      std::unique_ptr<v8_inspector::StringBuffer> message) override {
+    frontend_channel_->SendMessageToFrontend(message->string());
   }
   void flushProtocolNotifications() override {}
 
@@ -137,7 +138,13 @@ v8::Local<v8::Context> InspectorClientImpl::ensureDefaultContextInGroup(int) {
   return context_.Get(isolate_);
 }
 
+void InspectorClientImpl::setCurrentTimeMSForTest(double time) {
+  current_time_ = time;
+  current_time_set_for_test_ = true;
+}
+
 double InspectorClientImpl::currentTimeMS() {
+  if (current_time_set_for_test_) return current_time_;
   return v8::base::OS::TimeCurrentMillis();
 }
 

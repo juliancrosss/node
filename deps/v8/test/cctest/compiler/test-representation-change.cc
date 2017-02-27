@@ -4,13 +4,13 @@
 
 #include <limits>
 
+#include "src/compiler/node-matchers.h"
+#include "src/compiler/representation-change.h"
+#include "src/objects-inl.h"
 #include "test/cctest/cctest.h"
 #include "test/cctest/compiler/codegen-tester.h"
 #include "test/cctest/compiler/graph-builder-tester.h"
 #include "test/cctest/compiler/value-helper.h"
-
-#include "src/compiler/node-matchers.h"
-#include "src/compiler/representation-change.h"
 
 namespace v8 {
 namespace internal {
@@ -427,7 +427,7 @@ TEST(SignednessInWord32) {
               MachineRepresentation::kFloat64, Type::Number(),
               MachineRepresentation::kWord32);
   CheckChange(IrOpcode::kCheckedTruncateTaggedToWord32,
-              MachineRepresentation::kTagged, Type::NumberOrOddball(),
+              MachineRepresentation::kTagged, Type::NonInternal(),
               MachineRepresentation::kWord32,
               UseInfo::CheckedNumberOrOddballAsWord32());
 

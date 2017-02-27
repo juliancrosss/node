@@ -10,6 +10,7 @@
 
 #include "src/compiler/node-properties.h"
 
+#include "src/objects-inl.h"
 #include "src/signature.h"
 
 #include "src/wasm/wasm-module.h"
@@ -235,6 +236,38 @@ TEST_F(Int64LoweringTest, Int64Store) {
   const StoreRepresentation rep32(MachineRepresentation::kWord32,
                                   WriteBarrierKind::kNoWriteBarrier);
   INT64_STORE_LOWERING(Store, rep32, rep64);
+}
+
+TEST_F(Int64LoweringTest, Int32Store) {
+  const StoreRepresentation rep32(MachineRepresentation::kWord32,
+                                  WriteBarrierKind::kNoWriteBarrier);
+  int32_t base = 1111;
+  int32_t index = 2222;
+  int32_t return_value = 0x5555;
+
+  Signature<MachineRepresentation>::Builder sig_builder(zone(), 1, 0);
+  sig_builder.AddReturn(MachineRepresentation::kWord32);
+
+  Node* store = graph()->NewNode(machine()->Store(rep32), Int32Constant(base),
+                                 Int32Constant(index), Int64Constant(value(0)),
+                                 start(), start());
+
+  Node* zero = graph()->NewNode(common()->Int32Constant(0));
+  Node* ret = graph()->NewNode(common()->Return(), zero,
+                               Int32Constant(return_value), store, start());
+
+  NodeProperties::MergeControlToEnd(graph(), common(), ret);
+
+  Int64Lowering lowering(graph(), machine(), common(), zone(),
+                         sig_builder.Build());
+  lowering.LowerGraph();
+
+  EXPECT_THAT(
+      graph()->end()->InputAt(1),
+      IsReturn(IsInt32Constant(return_value),
+               IsStore(rep32, IsInt32Constant(base), IsInt32Constant(index),
+                       IsInt32Constant(low_word_value(0)), start(), start()),
+               start()));
 }
 
 TEST_F(Int64LoweringTest, Int64UnalignedStore) {
@@ -570,8 +603,7 @@ TEST_F(Int64LoweringTest, F64ReinterpretI64) {
              MachineRepresentation::kFloat64);
 
   Capture<Node*> stack_slot_capture;
-  Matcher<Node*> stack_slot_matcher =
-      IsStackSlot(MachineRepresentation::kWord64);
+  Matcher<Node*> stack_slot_matcher = IsStackSlot(sizeof(int64_t));
 
   Capture<Node*> store_capture;
   Matcher<Node*> store_matcher =
@@ -602,8 +634,7 @@ TEST_F(Int64LoweringTest, I64ReinterpretF64) {
              MachineRepresentation::kWord64);
 
   Capture<Node*> stack_slot;
-  Matcher<Node*> stack_slot_matcher =
-      IsStackSlot(MachineRepresentation::kWord64);
+  Matcher<Node*> stack_slot_matcher = IsStackSlot(sizeof(int64_t));
 
   Capture<Node*> store;
   Matcher<Node*> store_matcher = IsStore(
@@ -872,6 +903,25 @@ TEST_F(Int64LoweringTest, EffectPhiLoop) {
   eff_phi->InsertInput(zone(), 1, store);
   NodeProperties::ChangeOp(eff_phi,
                            common()->ResizeMergeOrPhi(eff_phi->op(), 2));
+
+  LowerGraph(load, MachineRepresentation::kWord64);
+}
+
+TEST_F(Int64LoweringTest, LoopCycle) {
+  // New node with two placeholders.
+  Node* compare = graph()->NewNode(machine()->Word64Equal(), Int64Constant(0),
+                                   Int64Constant(value(0)));
+
+  Node* load = graph()->NewNode(
+      machine()->Load(MachineType::Int64()), Int64Constant(value(1)),
+      Int64Constant(value(2)), graph()->start(),
+      graph()->NewNode(
+          common()->Loop(2), graph()->start(),
+          graph()->NewNode(common()->IfFalse(),
+                           graph()->NewNode(common()->Branch(), compare,
+                                            graph()->start()))));
+
+  NodeProperties::ReplaceValueInput(compare, load, 0);
 
   LowerGraph(load, MachineRepresentation::kWord64);
 }
