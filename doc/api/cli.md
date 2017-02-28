@@ -375,7 +375,7 @@ options property is explicitly specified for a TLS or HTTPS client or server.
 
 ### `OPENSSL_CONF=file`
 <!-- YAML
-added: REPLACEME
+added: v7.7.0
 -->
 
 Load an OpenSSL configuration file on startup. Among other uses, this can be
@@ -387,7 +387,7 @@ variable is ignored.
 
 ### `SSL_CERT_DIR=dir`
 <!-- YAML
-added: REPLACEME
+added: v7.7.0
 -->
 
 If `--use-openssl-ca` is enabled, this overrides and sets OpenSSL's directory
@@ -399,7 +399,7 @@ OpenSSL, it may cause them to trust the same CAs as node.
 
 ### `SSL_CERT_FILE=file`
 <!-- YAML
-added: REPLACEME
+added: v7.7.0
 -->
 
 If `--use-openssl-ca` is enabled, this overrides and sets OpenSSL's file
